@@ -7,14 +7,26 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 
-#handToEnvidoPointsConverterTest
-add_executable(handToEnvidoPointsConverterTest handToEnvidoPointsConverterTest.cpp)
-target_link_libraries(handToEnvidoPointsConverterTest PUBLIC
+#deckTest
+add_executable(deckTest deckTest.cpp)
+target_link_libraries(deckTest PUBLIC
     gtest_main
-    handToEnvidoPointsConverter
+    deck
 )
 
 add_test(
-    NAME handToEnvidoPointsConverterTest
-    COMMAND handToEnvidoPointsConverterTest
+    NAME deckTest
+    COMMAND deckTest
+)
+
+#cardUtilsTest
+add_executable(cardUtilsTest cardUtilsTest.cpp)
+target_link_libraries(cardUtilsTest PUBLIC
+    gtest_main
+    cardUtils
+)
+
+add_test(
+    NAME cardUtilsTest
+    COMMAND cardUtilsTest
 )

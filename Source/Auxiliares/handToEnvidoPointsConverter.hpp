@@ -1,1 +1,0 @@
-bool isTrue(bool val);

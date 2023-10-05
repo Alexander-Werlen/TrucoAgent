@@ -6,4 +6,10 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-add_library(handToEnvidoPointsConverter STATIC handToEnvidoPointsConverter.cpp handToEnvidoPointsConverter.hpp)
+#deck
+add_library(deck STATIC deck.cpp deck.hpp)
+
+#cardUtils
+add_library(cardUtils STATIC cardUtils.cpp cardUtils.hpp)
+
+target_link_libraries(cardUtils PRIVATE deck)
