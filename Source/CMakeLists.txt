@@ -4,3 +4,4 @@ project(TrucoSolver C CXX)
 
 add_subdirectory(Auxiliares)
 add_subdirectory(EventsInterpreter)
+add_subdirectory(StateConverters)

@@ -4,3 +4,5 @@ project(Tests C CXX)
 
 add_subdirectory(AuxiliaresTests)
 add_subdirectory(EventsInterpreterTest)
+add_subdirectory(StateConverters)
+
