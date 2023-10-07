@@ -1,7 +1,7 @@
 /* 
     Provides auxiliar functions that involve cards
 */
-
+#pragma once
 #include "deck.hpp"
 #include <string>
 

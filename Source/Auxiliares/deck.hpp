@@ -2,7 +2,7 @@
     Provides deck full of cards that can be used in the game.
     Algo has function to detect if a card belongs in such deck.
 */
-
+#pragma once
 #include <vector>
 #include <set>
 #include <string>
