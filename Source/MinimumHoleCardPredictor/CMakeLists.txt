@@ -11,3 +11,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_library(minimumHoleCardPredictor STATIC minimumHoleCardPredictor.cpp minimumHoleCardPredictor.hpp)
 
 target_link_libraries(minimumHoleCardPredictor PRIVATE deck cardUtils)
+
+#minimumHoleCardPredictor generator
+add_executable(minimumHoleCardPredictorGenerator minimumHoleCardPredictorGenerator.cpp)
+target_link_libraries(minimumHoleCardPredictorGenerator PRIVATE deck cardUtils)
+
