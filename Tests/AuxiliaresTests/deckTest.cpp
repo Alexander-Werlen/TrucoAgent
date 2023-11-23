@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../Source/Auxiliares/deck.hpp"
+#include "../../source/auxiliares/deck.hpp"
 
 Deck deck;
 TEST(DeckFunctionalities, cardIsInDeck){

@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../Source/Auxiliares/cardUtils.hpp"
+#include "../../source/auxiliares/cardUtils.hpp"
 
 cardUtils utils;
 

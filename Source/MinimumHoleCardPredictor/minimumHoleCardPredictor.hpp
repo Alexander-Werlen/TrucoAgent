@@ -14,8 +14,6 @@
 #include <map>
 #include <stdexcept>
 
-#include <iostream> //debugging
-
 using namespace std;
 
 class MinimumHoleCardPredictor{

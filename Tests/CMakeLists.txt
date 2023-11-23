@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.27)
 
 project(Tests C CXX)
 
-add_subdirectory(AuxiliaresTests)
-add_subdirectory(EventsInterpreterTests)
-add_subdirectory(StateConvertersTests)
-add_subdirectory(MinimumHoleCardPredictorTests)
+add_subdirectory(auxiliaresTests)
+add_subdirectory(eventsInterpreterTests)
+add_subdirectory(stateConvertersTests)
+add_subdirectory(minimumHoleCardPredictorTests)
 
 

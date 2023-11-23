@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../Source/MinimumHoleCardPredictor/minimumHoleCardPredictor.hpp"
+#include "../../source/minimumHoleCardPredictor/minimumHoleCardPredictor.hpp"
 
 MinimumHoleCardPredictor predictor;
 

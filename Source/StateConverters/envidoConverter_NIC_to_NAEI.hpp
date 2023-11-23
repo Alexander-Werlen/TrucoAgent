@@ -3,7 +3,7 @@
 */
 
 #pragma once
-#include "..\EventsInterpreter\eventsInterpreter.hpp"
+#include "..\eventsInterpreter\eventsInterpreter.hpp"
 #include <string>
 
 class EnvidoStateConverter{

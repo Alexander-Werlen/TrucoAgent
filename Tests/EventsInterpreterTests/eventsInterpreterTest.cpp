@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../Source/EventsInterpreter/eventsInterpreter.hpp"
+#include "../../source/eventsInterpreter/eventsInterpreter.hpp"
 
 EventsInterpreter interpreter;
 TEST(eventClasification, eventIsEnvidoAction){

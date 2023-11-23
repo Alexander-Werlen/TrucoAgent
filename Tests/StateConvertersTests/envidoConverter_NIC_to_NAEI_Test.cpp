@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "../../Source/StateConverters/envidoConverter_NIC_to_NAEI.hpp"
+#include "../../source/stateConverters/envidoConverter_NIC_to_NAEI.hpp"
 
 EnvidoStateConverter converter;
 TEST(envido_NIC_to_NAEI, envido_NIC_to_NAEI){
