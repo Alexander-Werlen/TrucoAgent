@@ -10,11 +10,9 @@
 using namespace std;
 
 class Deck{
-    private:
-    vector<string> deckArr;
-    set<string> deckSet;
-
     public:
     Deck();
+    set<string> deckSet;
+    vector<string> deckArr;
     bool cardIsInDeck(const string & card);
 };

@@ -12,4 +12,4 @@ add_library(deck STATIC deck.cpp deck.hpp)
 #cardUtils
 add_library(cardUtils STATIC cardUtils.cpp cardUtils.hpp)
 
-target_link_libraries(cardUtils PRIVATE deck)
+target_link_libraries(cardUtils PUBLIC deck)
