@@ -93,9 +93,21 @@ int cardUtils::envidoPointsOfHand(const vector<string> & v){
     
     return bestEnvidoPoints;
 };
+bool cardUtils::firstWinsTruco(const string & c1, const string & c2){
+    return valorTruco(c1)<valorTruco(c2);
+};
 
 //formating
 void cardUtils::formatHand(vector<string> & hand){
     //orders cards in vector according to standard
     sort(hand.begin(),hand.end());
+};
+void cardUtils::formatHandTrucoValue(vector<string> & hand){
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 2; j++)
+        {
+            if(!firstWinsTruco(hand[j],hand[j+1])) swap(hand[j],hand[j+1]);
+        }
+    }
 };

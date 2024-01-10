@@ -23,9 +23,11 @@ class cardUtils{
     //computing
     int envidoPointsGivenTwoCards(const string &, const string &);
     int envidoPointsOfHand(const vector<string> &);
+    bool firstWinsTruco(const string &, const string &);
 
     //formating
     void formatHand(vector<string> &);
+    void formatHandTrucoValue(vector<string> &);
 
     private:
     Deck fullDeck;

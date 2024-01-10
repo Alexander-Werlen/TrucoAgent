@@ -71,7 +71,7 @@ string ptsToString(int envidoPoints){
 }
 
 string createInitStructure(int ptsP1, int ptsP2){
-    string initStructure="0 ";
+    string initStructure="0|";
     initStructure+=ptsToString(ptsP1);
     initStructure+="-";
     initStructure+=ptsToString(ptsP2);
@@ -157,35 +157,15 @@ class GameState{
         float P1 = gamePointsP1;
         float P2 = gamePointsP2;
 
-        if(pointsP1>=pointsP2) P1+=valueEnvido;
-        else P2+=valueEnvido;
-
-        if(P1>=30) return 50;
-        if(P2>=30) return -50;
-
-        float value = 50*atan((P1-P2)/7);
-
-        value=max(-48.0f, value);
-        value=min(48.0f, value);
-
-        return value;
+        if(pointsP1>=pointsP2) return valueEnvido;
+        else return -valueEnvido;
     }
     float getEvaluationReject() const{
         float P1 = gamePointsP1;
         float P2 = gamePointsP2;
 
-        if(!isP1Turn) P1+=valueEnvido;
-        else P2+=valueEnvido;
-
-        if(P1>=30) return 50;
-        if(P2>=30) return -50;
-
-        float value = 50*atan((P1-P2)/7);
-
-        value=max(-48.0f, value);
-        value=min(48.0f, value);
-
-        return value;
+        if(!isP1Turn) return valueEnvido;
+        else return -valueEnvido;
     }
 
     private:
@@ -195,9 +175,9 @@ class GameState{
         pointsId = createIdOfEnvidoPointsBothPlayer(pointsP1, pointsP2);
     }
     void initPrefixes(){
-        infoStatePrefixP1 = initStructure + " " + pointsP1Id + " ";
-        infoStatePrefixP2 = initStructure + " " + pointsP2Id + " ";
-        gameStatePrefix = initStructure + " " + pointsId + " ";
+        infoStatePrefixP1 = initStructure + "|" + pointsP1Id + "|";
+        infoStatePrefixP2 = initStructure + "|" + pointsP2Id + "|";
+        gameStatePrefix = initStructure + "|" + pointsId + "|";
     }
 
 };
