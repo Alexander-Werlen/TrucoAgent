@@ -140,6 +140,7 @@ class Envido{
         expectedGameValue=0;
         for (int i = 1; i <= Niterations; i++)
         {
+            if(i%10000==0) cout<<i<<": "<<infoStates.size()<<endl;
             string chanceSample;
             FileSamples>>chanceSample;
             string startingPos="0|"+ptsToString(pts1)+"-"+ptsToString(pts2)+"|"+chanceSample+"|";
@@ -232,7 +233,6 @@ int main(){
     {
         for (int pts2 = 0; pts2 < 30; pts2++)
         {
-            if(pts1<15 || pts2<15) continue;
             //check if can solve
             if(envidoStateValues.find("e"+createIdOfEnvidoPointsBothPlayer(pts1,pts2))!=envidoStateValues.end()) continue;
             bool can=true;
@@ -303,7 +303,7 @@ int main(){
 
             //start cfr
             Envido agent;
-            agent.train(1e4, pts1, pts2);
+            agent.train(1e5, pts1, pts2);
 
             //store state value
             envidoStateValues["e"+createIdOfEnvidoPointsBothPlayer(pts1,pts2)]=agent.expectedGameValue;

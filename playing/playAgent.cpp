@@ -13,8 +13,9 @@ using namespace std;
 
 cardUtils utils;
 Deck deck;
-
-map<string,int> valorTrucoGivenCardAbs;
+map<string,int> valorTrucoGivenCard;
+map<string,int> valorTrucoAbs5GivenCard;
+map<string,int> whoWinsRound;
 map<int, vector<int>> posibleEnvidoBets = { //no falta envido
     {0, {2,3}},
     {2, {4,5}},
@@ -102,8 +103,6 @@ class Game{
         }
         playerIsMano = playerStartsAsMano;
         mesa = {"","","","","",""};
-        handP1Used = {false,false,false};
-        handP2Used = {false,false,false};
         currentRound=0;
         isP1Turn=true;
         //truco
@@ -112,6 +111,7 @@ class Game{
         canBetTrucoP2=true;
         hasToRespondTruco=false;
         isP1TrucoTurn=true;
+        P1StartsInTruco=true;
         roundWinsP1=0;
         roundWinsP2=0;
         //envido
@@ -127,8 +127,6 @@ class Game{
         auto bothHands = getRandomStart();
         handP1=bothHands.first;
         handP2=bothHands.second;
-        utils.formatHandTrucoValue(handP1);
-        utils.formatHandTrucoValue(handP2);
 
         utils.formatHandTrucoValue(handP1);
         utils.formatHandTrucoValue(handP2);
@@ -137,10 +135,12 @@ class Game{
         envidoPointsP2 = utils.envidoPointsOfHand(handP2);
 
         //infoStates
-        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|";
-        infoStateTrucoIdP1+=getBucketsStr(handP1)+"[X][P][LLL][GGG][1][t][f][0]";
-        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|";
-        infoStateTrucoIdP2+=getBucketsStr(handP2)+"[X][P][LLL][GGG][1][t][f][1]";
+        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P1-R1|";
+        infoStateTrucoIdP1+=getBucketsAbs5Str(handP1)+"[X]|";
+        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P2-R1|";
+        infoStateTrucoIdP2+=getBucketsAbs5Str(handP2)+"[X][M][P]|";
+        history="";
+        whoWonHistory="";
 
         infoStateEnvidoP1="0|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|["+ptsToString(envidoPointsP1)+"]|";
         infoStateEnvidoP2="0|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|["+ptsToString(envidoPointsP2)+"]|";
@@ -150,13 +150,14 @@ class Game{
         terminal=false;
 
         //idxs
-        idxAmountBetter=18;
-        idxAmountParda=21;
-        idxFirstColThrow=24;
-        idxFirstWin=29;
-        idxTrucoValue=34;
-        idxCanBet=37;
-        idxHasToRespond=40;
+        idxR1ThrownCard=24;
+        idxR1AmountBetter=27;
+        idxR1AmountParda=30;
+        idxR2FThrownCard=16;
+        idxR2SThrownCard=22;
+        idxR2SAmountBetter=25; 
+        idxR2SAmountParda=28; 
+        idxR3thrownCardStart=20;
         playerStartedAsMano=playerStartsAsMano;
     }
 
@@ -164,7 +165,7 @@ class Game{
     void playAgent(){
         if((playerIsMano?inEnvidoStageP2:inEnvidoStageP1)){//playEnvido
             string stateAgent = ((!playerIsMano)? infoStateEnvidoP1 : infoStateEnvidoP2);
-            //cout<<"Agent state: "<<stateAgent<<endl;
+            
             if(strategies.find(stateAgent)==strategies.end()){
                 cout<<"Agent state: "<<stateAgent<<endl;
                 cout<<"####ERROR envido state not found"<<endl;
@@ -174,6 +175,13 @@ class Game{
             std::discrete_distribution<std::size_t> d{strategies[stateAgent].probabilities.begin(), strategies[stateAgent].probabilities.end()};
 
             string action = strategies[stateAgent].actions[d(gen)];
+            
+            cout<<"Agent state: "<<stateAgent<<endl;
+            for (int i = 0; i < strategies[stateAgent].actions.size(); i++)
+            {
+                cout<<strategies[stateAgent].actions[i]<<" "<<strategies[stateAgent].probabilities[i]<<endl;
+            }
+            
 
             if(action=="(q)"){
                 acceptEnvido();
@@ -196,23 +204,15 @@ class Game{
 
 
         }else{//play truco
-            string stateAgent = (!playerIsMano)? infoStateTrucoIdP1 : infoStateTrucoIdP2;
-            //cout<<"Agent state: "<<stateAgent<<endl;
+            string stateAgent = ((!playerIsMano)? infoStateTrucoIdP1 : infoStateTrucoIdP2)+"["+whoWonHistory+"]"+history;
+            
             if(strategies.find(stateAgent)==strategies.end()){
                 cout<<"!WARNING truco state not found, random strat used"<<endl;
-                std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
                 if(hasToRespondTruco) rejectTruco();
                 else{
-                    if(playerIsMano){
-                        if(!handP2Used[0]) throwCard(0);
-                        else if(!handP2Used[1]) throwCard(1);
-                        else if(!handP2Used[2]) throwCard(2);
-                    }else{
-                        if(!handP1Used[0]) throwCard(0);
-                        else if(!handP1Used[1]) throwCard(1);
-                        else if(!handP1Used[2]) throwCard(2);
-                    }
+                    throwCard(0);
                 }
                 informMesa();
                 return;
@@ -221,6 +221,12 @@ class Game{
             std::discrete_distribution<std::size_t> d{strategies[stateAgent].probabilities.begin(), strategies[stateAgent].probabilities.end()};
 
             string action = strategies[stateAgent].actions[d(gen)];
+
+            cout<<"Agent state: "<<stateAgent<<endl;
+            for (int i = 0; i < strategies[stateAgent].actions.size(); i++)
+            {
+                cout<<strategies[stateAgent].actions[i]<<" "<<strategies[stateAgent].probabilities[i]<<endl;
+            }
 
             vector<string> actions = getActionsArray(action);
 
@@ -239,116 +245,189 @@ class Game{
     }
 
     void throwCard(int idxCard){
-        if(isP1TrucoTurn){
-            inEnvidoStageP1=false;
-            mesa[2*currentRound]=handP1[idxCard];
-            handP1Used[idxCard]=true;
-            isP1TrucoTurn=false;
-            isP1Turn=false;
-            if(mesa[2*currentRound+1]==""){
+        if(currentRound==0){
+            if(isP1TrucoTurn){
+                mesa[0]=handP1[idxCard];
+                //stateP2
                 int c=0,p=0;
                 for(auto card : handP2) if(utils.firstWinsTruco(card, handP1[idxCard])) c++;
                 for(auto card : handP2) if(utils.valorTruco(card)==utils.valorTruco(handP1[idxCard])) p++;
-                infoStateTrucoIdP2[idxAmountBetter]='0'+c;
-                infoStateTrucoIdP2[idxAmountParda]='0'+p;
-            }
-            infoStateTrucoIdP1[idxFirstColThrow+idxCard]='U';
-        }else{
-            inEnvidoStageP2=false;
-            mesa[2*currentRound+1]=handP2[idxCard];
-            handP2Used[idxCard]=true;
-            isP1TrucoTurn=true;
-            isP1Turn=true;
-            if(mesa[2*currentRound]==""){
-                int c=0,p=0;
-                for(auto card : handP1) if(utils.firstWinsTruco(card, handP2[idxCard])) c++;
-                for(auto card : handP1) if(utils.valorTruco(card)==utils.valorTruco(handP2[idxCard])) p++;
-                infoStateTrucoIdP1[idxAmountBetter]='0'+c;
-                infoStateTrucoIdP1[idxAmountParda]='0'+p;
-            }
-            infoStateTrucoIdP2[idxFirstColThrow+idxCard]='U';
-        }
-        if(mesa[2*currentRound]!="" && mesa[2*currentRound+1]!=""){
-            infoStateTrucoIdP1[idxAmountBetter]='X';
-            infoStateTrucoIdP1[idxAmountParda]='P';
-            infoStateTrucoIdP2[idxAmountBetter]='X';
-            infoStateTrucoIdP2[idxAmountParda]='P';
-            if(utils.firstWinsTruco(mesa[2*currentRound], mesa[2*currentRound+1])){
-                roundWinsP1++;
-                infoStateTrucoIdP1[idxFirstWin+currentRound]='0';
-                infoStateTrucoIdP2[idxFirstWin+currentRound]='0';
-                isP1TrucoTurn=true;
-                isP1Turn=true;
-            }else if(utils.firstWinsTruco(mesa[2*currentRound+1], mesa[2*currentRound])){
-                roundWinsP2++;
-                infoStateTrucoIdP1[idxFirstWin+currentRound]='1';
-                infoStateTrucoIdP2[idxFirstWin+currentRound]='1';
+                infoStateTrucoIdP2[idxR1AmountBetter]='0'+c;
+                infoStateTrucoIdP2[idxR1AmountParda]='0'+p;
+                infoStateTrucoIdP2[idxR1ThrownCard]='0'+valorTrucoAbs5GivenCard[handP1[idxCard]];
+                //stateP1
+                infoStateTrucoIdP1[idxR1ThrownCard]='0'+idxCard;
+                //history
+                history+="(TP1)";
+
+                handP1.erase(handP1.begin()+idxCard);
                 isP1TrucoTurn=false;
                 isP1Turn=false;
             }else{
+                mesa[1]=handP2[idxCard];
+                handP2.erase(handP2.begin()+idxCard);
+                history+="(TP2)";
+            }
+        }else if(currentRound==1){
+            if(P1StartsInTruco){
+                if(isP1TrucoTurn){
+                    mesa[2]=handP1[idxCard];
+                    //stateP1
+                    infoStateTrucoIdP1[idxR2FThrownCard]='0'+idxCard;
+                    //stateP2
+                    int c=0,p=0;
+                    for(auto card : handP2) if(utils.firstWinsTruco(card, handP1[idxCard])) c++;
+                    for(auto card : handP2) if(utils.valorTruco(card)==utils.valorTruco(handP1[idxCard])) p++;
+                    infoStateTrucoIdP2[idxR2SAmountBetter]='0'+c;
+                    infoStateTrucoIdP2[idxR2SAmountParda]='0'+p;
+                    infoStateTrucoIdP2[idxR2SThrownCard]='0'+valorTrucoAbs5GivenCard[handP1[idxCard]];
+                    //history
+                    history+="(TP1)";
+
+                    handP1.erase(handP1.begin()+idxCard);
+                    isP1TrucoTurn=false;
+                    isP1Turn=false;
+                }else{
+                    mesa[3]=handP2[idxCard];
+                    handP2.erase(handP2.begin()+idxCard);
+                    history+="(TP2)";
+                }
+            }else{
+                if(isP1TrucoTurn){
+                    mesa[2]=handP1[idxCard];
+                    handP1.erase(handP1.begin()+idxCard);
+                    history+="(TP1)";
+                }else{
+                    mesa[3]=handP2[idxCard];
+                    //stateP1
+                    infoStateTrucoIdP2[idxR2FThrownCard]='0'+idxCard;
+                    //stateP2
+                    int c=0,p=0;
+                    for(auto card : handP1) if(utils.firstWinsTruco(card, handP2[idxCard])) c++;
+                    for(auto card : handP1) if(utils.valorTruco(card)==utils.valorTruco(handP2[idxCard])) p++;
+                    infoStateTrucoIdP1[idxR2SAmountBetter]='0'+c;
+                    infoStateTrucoIdP1[idxR2SAmountParda]='0'+p;
+                    infoStateTrucoIdP1[idxR2SThrownCard]='0'+valorTrucoAbs5GivenCard[handP2[idxCard]];
+                    //history
+                    history+="(TP2)";
+
+                    handP2.erase(handP2.begin()+idxCard);
+                    isP1TrucoTurn=true;
+                    isP1Turn=true;
+                }
+            }
+        }else if(currentRound==2){
+            if(isP1TrucoTurn){
+                if(P1StartsInTruco){
+                    mesa[4]=handP1[idxCard];
+                    infoStateTrucoIdP1[idxR3thrownCardStart]=ptsToString(valorTrucoGivenCard[handP1[idxCard]])[0];
+                    infoStateTrucoIdP1[idxR3thrownCardStart+1]=ptsToString(valorTrucoGivenCard[handP1[idxCard]])[1];
+                    infoStateTrucoIdP2[idxR3thrownCardStart]=ptsToString(valorTrucoGivenCard[handP1[idxCard]])[0];
+                    infoStateTrucoIdP2[idxR3thrownCardStart+1]=ptsToString(valorTrucoGivenCard[handP1[idxCard]])[1];
+                    isP1TrucoTurn=false;
+                    isP1Turn=false;
+                    history+="(TP1)";
+                }else{
+                    mesa[4]=handP1[idxCard];
+                }
+            }else{
+                if(P1StartsInTruco){
+                    mesa[5]=handP2[idxCard];
+                }else{
+                    mesa[5]=handP2[idxCard];
+                    infoStateTrucoIdP1[idxR3thrownCardStart]=ptsToString(valorTrucoGivenCard[handP2[idxCard]])[0];
+                    infoStateTrucoIdP1[idxR3thrownCardStart+1]=ptsToString(valorTrucoGivenCard[handP2[idxCard]])[1];
+                    infoStateTrucoIdP2[idxR3thrownCardStart]=ptsToString(valorTrucoGivenCard[handP2[idxCard]])[0];
+                    infoStateTrucoIdP2[idxR3thrownCardStart+1]=ptsToString(valorTrucoGivenCard[handP2[idxCard]])[1];
+                    isP1TrucoTurn=true;
+                    isP1Turn=true;
+                    history+="(TP2)";
+                }
+            }
+        }
+        
+        if(mesa[2*currentRound]!="" && mesa[2*currentRound+1]!=""){
+            if(utils.firstWinsTruco(mesa[2*currentRound], mesa[2*currentRound+1])){
                 roundWinsP1++;
-                roundWinsP2++;
-                infoStateTrucoIdP1[idxFirstWin+currentRound]='E';
-                infoStateTrucoIdP2[idxFirstWin+currentRound]='E';
                 isP1TrucoTurn=true;
                 isP1Turn=true;
+                P1StartsInTruco=true;
+                whoWonHistory+="1";
+            }else if(utils.firstWinsTruco(mesa[2*currentRound+1], mesa[2*currentRound])){
+                roundWinsP2++;
+                isP1TrucoTurn=false;
+                isP1Turn=false;
+                P1StartsInTruco=false;
+                whoWonHistory+="2";
+            }else{
+                roundWinsP1++;
+                roundWinsP2++;
+                isP1TrucoTurn=true;
+                isP1Turn=true;
+                P1StartsInTruco=true;
+                whoWonHistory+="E";
             }
 
-            if(roundWinsP1>2){//dos pardas
+            if(whoWinsRound[whoWonHistory]==1){
                 terminal=true;
                 gamePointsP1+=trucoValue;
-            }else if(roundWinsP2>2){
+            }else if(whoWinsRound[whoWonHistory]==2){
                 terminal=true;
                 gamePointsP2+=trucoValue;
+            }else{
+                currentRound++;
+                if(currentRound==1){
+                    if(P1StartsInTruco){
+                        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P1-R2F|";
+                        infoStateTrucoIdP1+="[X]"+getBucketsAbs14Str(handP1)+"|";
+                        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P2-R2S|";
+                        infoStateTrucoIdP2+=getBucketsAbs5Str(handP2)+"[X][M][P]|";
+                    }else{
+                        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P1-R2S|";
+                        infoStateTrucoIdP1+=getBucketsAbs5Str(handP1)+"[X][M][P]|";
+                        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P2-R2F|";
+                        infoStateTrucoIdP2+="[X]"+getBucketsAbs14Str(handP2)+"|";
+                    }
+                }else if(currentRound==2){
+                    if(P1StartsInTruco){
+                        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P1-R3F|";
+                        infoStateTrucoIdP1+=getBucketsAbs14Str(handP1)+"[XX]|";
+                        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P2-R3S|";
+                        infoStateTrucoIdP2+=getBucketsAbs14Str(handP2)+"[XX]|";
+                    }else{
+                        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P1-R3S|";
+                        infoStateTrucoIdP1+=getBucketsAbs14Str(handP1)+"[XX]|";
+                        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P2-R3F|";
+                        infoStateTrucoIdP2+=getBucketsAbs14Str(handP2)+"[XX]|";
+                    }
+                }
             }
-            else if(roundWinsP1>1 && roundWinsP2<2){
-                terminal=true;
-                gamePointsP1+=trucoValue;
-            }else if(roundWinsP2>1 && roundWinsP1<2){
-                terminal=true;
-                gamePointsP2+=trucoValue;
-            }else if(currentRound==2){//ultima es parda
-                terminal=true;
-                if(roundWinsP1>=roundWinsP2) gamePointsP1+=trucoValue;
-                else gamePointsP2+=trucoValue;
-            }
-            currentRound++;
+            
         }
     }
     void betTruco(){
-        informTrucoBet();
-        hasToRespondTrucoIsP1=!isP1Turn;
         if(isP1Turn){
             if(hasToRespondTruco) trucoValue++;
             hasToRespondTruco=true;
             isP1Turn=false;
             canBetTrucoP1=false;
             canBetTrucoP2=trucoValue<3;
-            infoStateTrucoIdP1[idxHasToRespond]='f';
-            infoStateTrucoIdP2[idxHasToRespond]='t';
         }else{
             if(hasToRespondTruco) trucoValue++;
             hasToRespondTruco=true;
             isP1Turn=true;
             canBetTrucoP2=false;
             canBetTrucoP1=trucoValue<3;
-            infoStateTrucoIdP2[idxHasToRespond]='f';
-            infoStateTrucoIdP1[idxHasToRespond]='t';
         }
-        infoStateTrucoIdP1[idxCanBet]=canBetTrucoP1?'t':'f';
-        infoStateTrucoIdP2[idxCanBet]=canBetTrucoP2?'t':'f';
-        infoStateTrucoIdP1[idxTrucoValue]='0'+trucoValue;
-        infoStateTrucoIdP2[idxTrucoValue]='0'+trucoValue;
+        history+="(b)";
+        informTrucoBet();
     }
     void acceptTruco(){
         informAcceptTruco();
         isP1Turn=isP1TrucoTurn;
         hasToRespondTruco=false;
         trucoValue++;
-        infoStateTrucoIdP2[idxHasToRespond]='f';
-        infoStateTrucoIdP1[idxHasToRespond]='f';
-        infoStateTrucoIdP1[idxTrucoValue]='0'+trucoValue;
-        infoStateTrucoIdP2[idxTrucoValue]='0'+trucoValue;
+        history+="(q)";
     }
     void rejectTruco(){
         informRejectTruco();
@@ -625,6 +704,7 @@ class Game{
     bool hasToRespondTruco;
     bool isP1TrucoTurn;
     bool isP1Turn;
+    bool P1StartsInTruco;
     bool hasToRespondTrucoIsP1;
     int roundWinsP1;
     int roundWinsP2;
@@ -640,17 +720,20 @@ class Game{
 
     string infoStateTrucoIdP1;
     string infoStateTrucoIdP2;
-    int idxAmountBetter; 
-    int idxAmountParda; 
-    int idxFirstColThrow; 
-    int idxFirstWin; 
-    int idxTrucoValue;
-    int idxCanBet;
-    int idxHasToRespond;
+    int idxR1AmountBetter; 
+    int idxR1AmountParda; 
+    int idxR1ThrownCard;
+    int idxR2SAmountBetter; 
+    int idxR2SAmountParda; 
+    int idxR2SThrownCard;
+    int idxR2FThrownCard;
+    int idxR3thrownCardStart;
     bool playerStartedAsMano;
 
     string infoStateEnvidoP1; //historia compartida
     string infoStateEnvidoP2;
+    string history;
+    string whoWonHistory;
 
     bool inEnvidoStageP1;
     bool inEnvidoStageP2;
@@ -676,14 +759,27 @@ class Game{
         infoStateEnvidoP2+=action;
     }
 
-    string getBucketsStr(vector<string> & v){
+    string getBucketsAbs5Str(vector<string> & v){
         vector<string> b;
-        for (int i = 0; i < 3; i++)
+        for (string card : v)
         {
-            b.push_back("["+to_string(valorTrucoGivenCardAbs[v[i]])+"]");
+            b.push_back("["+to_string(valorTrucoAbs5GivenCard[card])+"]");
         }
         sort(b.begin(),b.end());
-        return b[0]+b[1]+b[2];
+        string res="";
+        for(string bucketId : b) res+=bucketId;
+        return res;
+    }
+    string getBucketsAbs14Str(vector<string> & v){
+        vector<string> b;
+        for (string card : v)
+        {
+            b.push_back("["+ptsToString(valorTrucoGivenCard[card])+"]");
+        }
+        sort(b.begin(),b.end());
+        string res="";
+        for(string bucketId : b) res+=bucketId;
+        return res;
     }
     
     string getBetAction(int betSize){//not for (bf)
@@ -693,56 +789,126 @@ class Game{
 
 int main(){
     {
-        valorTrucoGivenCardAbs["01e"] = 1;  
-        valorTrucoGivenCardAbs["01b"] = 1;  
-        valorTrucoGivenCardAbs["07e"] = 1;  
-        valorTrucoGivenCardAbs["07o"] = 1;  
+        valorTrucoAbs5GivenCard["01e"] = 1;  
+        valorTrucoAbs5GivenCard["01b"] = 1;  
+        valorTrucoAbs5GivenCard["07e"] = 1;  
+        valorTrucoAbs5GivenCard["07o"] = 1;  
 
-        valorTrucoGivenCardAbs["03b"] = 2;  
-        valorTrucoGivenCardAbs["03c"] = 2;  
-        valorTrucoGivenCardAbs["03e"] = 2;  
-        valorTrucoGivenCardAbs["03o"] = 2;  
+        valorTrucoAbs5GivenCard["03b"] = 2;  
+        valorTrucoAbs5GivenCard["03c"] = 2;  
+        valorTrucoAbs5GivenCard["03e"] = 2;  
+        valorTrucoAbs5GivenCard["03o"] = 2;  
 
-        valorTrucoGivenCardAbs["02b"] = 2;  
-        valorTrucoGivenCardAbs["02e"] = 2;  
-        valorTrucoGivenCardAbs["02c"] = 2;  
-        valorTrucoGivenCardAbs["02o"] = 2;  
+        valorTrucoAbs5GivenCard["02b"] = 2;  
+        valorTrucoAbs5GivenCard["02e"] = 2;  
+        valorTrucoAbs5GivenCard["02c"] = 2;  
+        valorTrucoAbs5GivenCard["02o"] = 2;  
 
-        valorTrucoGivenCardAbs["01c"] = 3;  
-        valorTrucoGivenCardAbs["01o"] = 3;  
+        valorTrucoAbs5GivenCard["01c"] = 3;  
+        valorTrucoAbs5GivenCard["01o"] = 3;  
 
-        valorTrucoGivenCardAbs["12c"] = 3; 
-        valorTrucoGivenCardAbs["12e"] = 3; 
-        valorTrucoGivenCardAbs["12o"] = 3; 
-        valorTrucoGivenCardAbs["12b"] = 3; 
+        valorTrucoAbs5GivenCard["12c"] = 3; 
+        valorTrucoAbs5GivenCard["12e"] = 3; 
+        valorTrucoAbs5GivenCard["12o"] = 3; 
+        valorTrucoAbs5GivenCard["12b"] = 3; 
 
-        valorTrucoGivenCardAbs["11b"] = 3;  
-        valorTrucoGivenCardAbs["11o"] = 3;  
-        valorTrucoGivenCardAbs["11e"] = 3;  
-        valorTrucoGivenCardAbs["11c"] = 3;  
+        valorTrucoAbs5GivenCard["11b"] = 3;  
+        valorTrucoAbs5GivenCard["11o"] = 3;  
+        valorTrucoAbs5GivenCard["11e"] = 3;  
+        valorTrucoAbs5GivenCard["11c"] = 3;  
 
-        valorTrucoGivenCardAbs["10b"] = 4;  
-        valorTrucoGivenCardAbs["10o"] = 4;  
-        valorTrucoGivenCardAbs["10c"] = 4;  
-        valorTrucoGivenCardAbs["10e"] = 4;  
+        valorTrucoAbs5GivenCard["10b"] = 4;  
+        valorTrucoAbs5GivenCard["10o"] = 4;  
+        valorTrucoAbs5GivenCard["10c"] = 4;  
+        valorTrucoAbs5GivenCard["10e"] = 4;  
 
-        valorTrucoGivenCardAbs["07c"] = 4;  
-        valorTrucoGivenCardAbs["07b"] = 4;  
+        valorTrucoAbs5GivenCard["07c"] = 4;  
+        valorTrucoAbs5GivenCard["07b"] = 4;  
 
-        valorTrucoGivenCardAbs["06c"] = 5;  
-        valorTrucoGivenCardAbs["06e"] = 5;  
-        valorTrucoGivenCardAbs["06b"] = 5;  
-        valorTrucoGivenCardAbs["06o"] = 5;  
+        valorTrucoAbs5GivenCard["06c"] = 5;  
+        valorTrucoAbs5GivenCard["06e"] = 5;  
+        valorTrucoAbs5GivenCard["06b"] = 5;  
+        valorTrucoAbs5GivenCard["06o"] = 5;  
 
-        valorTrucoGivenCardAbs["05b"] = 5;  
-        valorTrucoGivenCardAbs["05o"] = 5;  
-        valorTrucoGivenCardAbs["05e"] = 5;  
-        valorTrucoGivenCardAbs["05c"] = 5;  
+        valorTrucoAbs5GivenCard["05b"] = 5;  
+        valorTrucoAbs5GivenCard["05o"] = 5;  
+        valorTrucoAbs5GivenCard["05e"] = 5;  
+        valorTrucoAbs5GivenCard["05c"] = 5;  
 
-        valorTrucoGivenCardAbs["04b"] = 5;  
-        valorTrucoGivenCardAbs["04c"] = 5;  
-        valorTrucoGivenCardAbs["04e"] = 5;  
-        valorTrucoGivenCardAbs["04o"] = 5;  
+        valorTrucoAbs5GivenCard["04b"] = 5;  
+        valorTrucoAbs5GivenCard["04c"] = 5;  
+        valorTrucoAbs5GivenCard["04e"] = 5;  
+        valorTrucoAbs5GivenCard["04o"] = 5;  
+    }
+    {
+        valorTrucoGivenCard["01e"] = 1;  
+        valorTrucoGivenCard["01b"] = 2;  
+        valorTrucoGivenCard["07e"] = 3;  
+        valorTrucoGivenCard["07o"] = 4;  
+
+        valorTrucoGivenCard["03b"] = 5;  
+        valorTrucoGivenCard["03c"] = 5;  
+        valorTrucoGivenCard["03e"] = 5;  
+        valorTrucoGivenCard["03o"] = 5;  
+
+        valorTrucoGivenCard["02b"] = 6;  
+        valorTrucoGivenCard["02e"] = 6;  
+        valorTrucoGivenCard["02c"] = 6;  
+        valorTrucoGivenCard["02o"] = 6;  
+
+        valorTrucoGivenCard["01c"] = 7;  
+        valorTrucoGivenCard["01o"] = 7;  
+
+        valorTrucoGivenCard["12c"] = 8; 
+        valorTrucoGivenCard["12e"] = 8; 
+        valorTrucoGivenCard["12o"] = 8; 
+        valorTrucoGivenCard["12b"] = 8; 
+
+        valorTrucoGivenCard["11b"] = 9;  
+        valorTrucoGivenCard["11o"] = 9;  
+        valorTrucoGivenCard["11e"] = 9;  
+        valorTrucoGivenCard["11c"] = 9;  
+
+        valorTrucoGivenCard["10b"] = 10;  
+        valorTrucoGivenCard["10o"] = 10;  
+        valorTrucoGivenCard["10c"] = 10;  
+        valorTrucoGivenCard["10e"] = 10;  
+
+        valorTrucoGivenCard["07c"] = 11;  
+        valorTrucoGivenCard["07b"] = 11;  
+
+        valorTrucoGivenCard["06c"] = 12;  
+        valorTrucoGivenCard["06e"] = 12;  
+        valorTrucoGivenCard["06b"] = 12;  
+        valorTrucoGivenCard["06o"] = 12;  
+
+        valorTrucoGivenCard["05b"] = 13;  
+        valorTrucoGivenCard["05o"] = 13;  
+        valorTrucoGivenCard["05e"] = 13;  
+        valorTrucoGivenCard["05c"] = 13;  
+
+        valorTrucoGivenCard["04b"] = 14;  
+        valorTrucoGivenCard["04c"] = 14;  
+        valorTrucoGivenCard["04e"] = 14;  
+        valorTrucoGivenCard["04o"] = 14;  
+    }
+    {
+        whoWinsRound["11"] = 1;
+        whoWinsRound["22"] = 2;
+        whoWinsRound["E1"] = 1;
+        whoWinsRound["E2"] = 2;
+        whoWinsRound["1E"] = 1;
+        whoWinsRound["2E"] = 2;
+
+        whoWinsRound["121"] = 1;
+        whoWinsRound["122"] = 2;
+        whoWinsRound["12E"] = 1;
+        whoWinsRound["212"] = 2;
+        whoWinsRound["211"] = 1;
+        whoWinsRound["21E"] = 2;
+        whoWinsRound["EEE"] = 1;
+        whoWinsRound["EE1"] = 1;
+        whoWinsRound["EE2"] = 2;
     }
     
     int gamePointsPlayer=15, gamePointsAgent=15;

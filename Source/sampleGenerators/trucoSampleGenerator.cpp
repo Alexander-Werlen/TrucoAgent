@@ -69,7 +69,7 @@ string getRandomStart(){
 }
 
 int main(){
-    int it = 1e4+500; //limite de samples
+    int it = 1e5+500; //limite de samples
     for (int pts1 = 0; pts1 < 30; pts1++)
     {
         for (int pts2 = 0; pts2 < 30; pts2++)
