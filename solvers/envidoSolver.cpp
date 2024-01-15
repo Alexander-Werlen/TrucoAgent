@@ -4,6 +4,8 @@
 #include <random>
 #include <fstream>
 #include <iostream>
+#include <windows.h>
+
 using namespace std;
 
 string ptsToString(int envidoPoints){
@@ -229,9 +231,9 @@ int main(){
     }
     FileInValues.close();
 
-    for (int pts1 = 0; pts1 < 30; pts1++)
+    for (int pts1 = 15; pts1 < 30; pts1++)
     {
-        for (int pts2 = 0; pts2 < 30; pts2++)
+        for (int pts2 = 15; pts2 < 30; pts2++)
         {
             //check if can solve
             if(envidoStateValues.find("e"+createIdOfEnvidoPointsBothPlayer(pts1,pts2))!=envidoStateValues.end()) continue;
@@ -321,6 +323,7 @@ int main(){
                     FileOut<<e.second.actions[act]<<" "<<strategy[act]<<endl;
                 }
             }
+            FileOut.close();
 
         }
     }
@@ -334,5 +337,6 @@ int main(){
     for(auto state : envidoStateValues){
         FileOutValues<<state.first<<" "<<state.second<<endl;
     }
-
+    FileOutValues.close();
+    ShellExecute(NULL, "open", "C:\\Users\\Usuario\\Desktop\\PC\\Yo\\QUE HACER\\PROGRAMAR\\Proyectos\\TrucoSolver\\TrucoWebAgent\\Out\\Build\\solvers\\Release\\trucoSolver.exe", NULL, NULL, SW_SHOWDEFAULT);
 }

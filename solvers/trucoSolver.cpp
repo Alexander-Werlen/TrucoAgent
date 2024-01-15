@@ -1,3 +1,4 @@
+#include <windows.h>
 #include "../source/auxiliares/cardUtils.hpp"
 #include "../source/auxiliares/deck.hpp"
 #include <chrono>
@@ -7,6 +8,7 @@
 #include <random>
 #include <fstream>
 #include <iostream>
+
 using namespace std;
 
 cardUtils utils;
@@ -491,7 +493,7 @@ class Truco{
                     actionsStorage.push_back({"(q)", newGame});
                 }
                 {// rebet
-                    if(game.isP1TrucoTurn==true && game.canBetP2){
+                    if((game.isP1TrucoTurn==true) && game.canBetP2){
                         Game newGame = game;
                         newGame.bet();
                         actionsStorage.push_back({"(b)", newGame});
@@ -748,9 +750,9 @@ int main(){
     }
     FileInValues.close();
     
-    for (int pts1 = 0; pts1 < 30; pts1++)
+    for (int pts1 = 15; pts1 < 30; pts1++)
     {
-        for (int pts2 = 0; pts2 < 30; pts2++)
+        for (int pts2 = 15; pts2 < 30; pts2++)
         {
             //check if can solve
             if(trucoStateValues.find("t"+createIdOfEnvidoPointsBothPlayer(pts1,pts2))!=trucoStateValues.end()) continue;
@@ -785,6 +787,7 @@ int main(){
                     FileOut<<e.second.actions[act]<<" "<<strategy[act]<<endl;
                 }
             }
+            FileOut.close();
 
         }
     }
@@ -798,7 +801,10 @@ int main(){
     for(auto state : envidoStateValues){
         FileOutValues<<state.first<<" "<<state.second<<endl;
     }
+    FileOutValues.close();
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << "Time computation = " << std::chrono::duration_cast<std::chrono::minutes>(end - begin).count() << " minutes" << std::endl;
-    system("pause");
+
+    ShellExecute(NULL, "open", "C:\\Users\\Usuario\\Desktop\\PC\\Yo\\QUE HACER\\PROGRAMAR\\Proyectos\\TrucoSolver\\TrucoWebAgent\\Out\\Build\\solvers\\Release\\envidoSolver.exe", NULL, NULL, SW_SHOWDEFAULT);
+
 }
