@@ -8,3 +8,9 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(playAgent playAgent.cpp)
 
 target_link_libraries(playAgent PUBLIC deck cardUtils)
+
+add_executable(useAgentAgainstPlayer useAgentAgainstPlayer.cpp)
+
+target_link_libraries(useAgentAgainstPlayer PUBLIC deck cardUtils)
+
+

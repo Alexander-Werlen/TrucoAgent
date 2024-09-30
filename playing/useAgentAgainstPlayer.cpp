@@ -50,31 +50,6 @@ Iter select_randomly(Iter start, Iter end) {
     return select_randomly(start, end, gen);
 }
 
-pair<vector<string>, vector<string>> getRandomStart(){
-    vector<string> cards1, cards2;
-    string r;
-    int n=0;
-    set<string> manos;
-    while(n<3){
-        r = *select_randomly(deck.deckArr.begin(), deck.deckArr.end());
-        if(manos.count(r)) continue;
-        n++;
-        cards1.push_back(r);
-        manos.insert(r);
-    }
-    while(n<6){
-        r = *select_randomly(deck.deckArr.begin(), deck.deckArr.end());
-        if(manos.count(r)) continue;
-        n++;
-        cards2.push_back(r);
-        manos.insert(r);
-    }
-    sort(cards1.begin(), cards1.end());
-    sort(cards2.begin(), cards2.end());
-
-    return {cards1, cards2};
-}
-
 string ptsToString(int envidoPoints){
     //converts int to envidoPoints string format
     string envidoPointsStr="";
@@ -88,19 +63,18 @@ string createIdOfEnvidoPointsBothPlayer(int ptsA, int ptsB){
     return "["+ptsToString(ptsA)+"-"+ptsToString(ptsB)+"]";
 }
 
+
+
 //actually a round
 class Game{
     public:
-    Game(int gamePointsPlayerIn, int gamePointsAgentIn, bool playerStartsAsMano){
-        gamePointsPlayer = gamePointsPlayerIn;
-        gamePointsAgent = gamePointsAgentIn;
-        if(playerStartsAsMano) {
-            gamePointsP1=gamePointsPlayerIn;
-            gamePointsP2=gamePointsAgentIn;
-        }else{
-            gamePointsP1=gamePointsAgentIn;
-            gamePointsP2=gamePointsPlayerIn;
-        }
+    Game(int gamePointsP1In, int gamePointsP2In, bool playerStartsAsMano){
+        gamePointsPlayer = gamePointsP1In;
+        gamePointsAgent = gamePointsP2In;
+        
+        gamePointsP1=gamePointsP1In;
+        gamePointsP2=gamePointsP2In;
+        
         playerIsMano = playerStartsAsMano;
         mesa = {"","","","","",""};
         currentRound=0;
@@ -124,26 +98,29 @@ class Game{
         valueFaltaEnvido=30-max(gamePointsP1, gamePointsP2);
 
         //getting hands
-        auto bothHands = getRandomStart();
-        handP1=bothHands.first;
-        handP2=bothHands.second;
+        handPlayer = inputHand();
+        utils.formatHandTrucoValue(handPlayer);
+        if(playerIsMano){
+            handP1=handPlayer;
+            envidoPointsP1 = utils.envidoPointsOfHand(handP1);
+            infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P1-R1|";
+            infoStateTrucoIdP1+=getBucketsAbs5Str(handP1)+"[X]|";
 
-        utils.formatHandTrucoValue(handP1);
-        utils.formatHandTrucoValue(handP2);
+            infoStateEnvidoP1="0|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|["+ptsToString(envidoPointsP1)+"]|";
+        } else{
+            handP2=handPlayer;
+            envidoPointsP2 = utils.envidoPointsOfHand(handP2);
+            infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P2-R1|";
+            infoStateTrucoIdP2+=getBucketsAbs5Str(handP2)+"[X][M][P]|";
 
-        envidoPointsP1 = utils.envidoPointsOfHand(handP1);
-        envidoPointsP2 = utils.envidoPointsOfHand(handP2);
+            infoStateEnvidoP2="0|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|["+ptsToString(envidoPointsP2)+"]|";
+        }
+
 
         //infoStates
-        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P1-R1|";
-        infoStateTrucoIdP1+=getBucketsAbs5Str(handP1)+"[X]|";
-        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P2-R1|";
-        infoStateTrucoIdP2+=getBucketsAbs5Str(handP2)+"[X][M][P]|";
         history="";
         whoWonHistory="";
 
-        infoStateEnvidoP1="0|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|["+ptsToString(envidoPointsP1)+"]|";
-        infoStateEnvidoP2="0|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|["+ptsToString(envidoPointsP2)+"]|";
         inEnvidoStageP1=true;
         inEnvidoStageP2=true;
 
@@ -163,13 +140,12 @@ class Game{
 
     //play
     void playAgent(){
-        if((playerIsMano?inEnvidoStageP2:inEnvidoStageP1)){//playEnvido
-            string stateAgent = ((!playerIsMano)? infoStateEnvidoP1 : infoStateEnvidoP2);
-            
+        if((playerIsMano?inEnvidoStageP1:inEnvidoStageP2)){//playEnvido
+            string stateAgent = ((playerIsMano)? infoStateEnvidoP1 : infoStateEnvidoP2);
+            cout<<stateAgent<<endl;
             if(strategies.find(stateAgent)==strategies.end()){
                 cout<<"Agent state: "<<stateAgent<<endl;
                 cout<<"####ERROR envido state not found"<<endl;
-                std::this_thread::sleep_for(std::chrono::milliseconds(10000));
             }
             std::mt19937 gen(std::random_device{}());
             std::discrete_distribution<std::size_t> d{strategies[stateAgent].probabilities.begin(), strategies[stateAgent].probabilities.end()};
@@ -181,15 +157,19 @@ class Game{
             {
                 cout<<strategies[stateAgent].actions[i]<<" "<<strategies[stateAgent].probabilities[i]<<endl;
             } */
-            
+            for (int i = 0; i < strategies[stateAgent].actions.size(); i++)
+            {
+                if(strategies[stateAgent].actions[i]==action) cout<<"P: "<<strategies[stateAgent].probabilities[i]<<endl;
+            }
+            cout<<"Agent CHOSE: "<<action<<endl;
 
             if(action=="(q)"){
                 acceptEnvido();
             }else if(action=="(nq)"){
                 rejectEnvido();
             }else if(action=="(p)"){
-                if(playerIsMano) inEnvidoStageP2=false;
-                else inEnvidoStageP1=false;
+                if(playerIsMano) inEnvidoStageP1=false;
+                else inEnvidoStageP2=false;
                 appendToEnvidoInfoStates("(p)");
             }else if(action=="(b2)") betEnvido(2);
             else if(action=="(b3)") betEnvido(3);
@@ -204,11 +184,10 @@ class Game{
 
 
         }else{//play truco
-            string stateAgent = ((!playerIsMano)? infoStateTrucoIdP1 : infoStateTrucoIdP2)+"["+whoWonHistory+"]"+history;
-            
+            string stateAgent = ((playerIsMano)? infoStateTrucoIdP1 : infoStateTrucoIdP2)+"["+whoWonHistory+"]"+history;
+            cout<<stateAgent<<endl;
             if(strategies.find(stateAgent)==strategies.end()){
                 cout<<"!WARNING truco state not found, random strat used"<<endl;
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
                 if(hasToRespondTruco) rejectTruco();
                 else{
@@ -230,8 +209,13 @@ class Game{
 
             vector<string> actions = getActionsArray(action);
 
+            for (int i = 0; i < strategies[stateAgent].actions.size(); i++)
+            {
+                if(strategies[stateAgent].actions[i]==action) cout<<"P: "<<strategies[stateAgent].probabilities[i]<<endl;
+            }
             for(string act : actions){
-                if(playerIsMano==isP1Turn) cout<<"####ERROR agente intenta jugar en turno de player"<<endl;
+                cout<<"Agent CHOSE: "<<action<<endl;
+                
                 if(act=="(q)") acceptTruco();
                 else if(act=="(nq)") rejectTruco();
                 else if(act=="(b)") betTruco();
@@ -244,17 +228,172 @@ class Game{
         }
     }
 
-    void throwCard(int idxCard){
+    void throwCardForced(string thrownCard){ //only opponent uses this
+        if(currentRound==0){
+            if(isP1TrucoTurn){
+                mesa[0]=thrownCard;
+                //stateP2
+                int c=0,p=0;
+                for(auto card : handP2) if(utils.firstWinsTruco(card, thrownCard)) c++;
+                for(auto card : handP2) if(utils.valorTruco(card)==utils.valorTruco(thrownCard)) p++;
+                infoStateTrucoIdP2[idxR1AmountBetter]='0'+c;
+                infoStateTrucoIdP2[idxR1AmountParda]='0'+p;
+                infoStateTrucoIdP2[idxR1ThrownCard]='0'+valorTrucoAbs5GivenCard[thrownCard];
+                //stateP1
+                //infoStateTrucoIdP1[idxR1ThrownCard]='0'+idxCard;
+                //history
+                history+="(TP1)";
+
+                //handP1.erase(handP1.begin()+idxCard);
+                isP1TrucoTurn=false;
+                isP1Turn=false;
+            }else{
+                mesa[1]=thrownCard;
+                //handP2.erase(handP2.begin()+idxCard);
+                history+="(TP2)";
+            }
+        }else if(currentRound==1){
+            if(P1StartsInTruco){
+                if(isP1TrucoTurn){
+                    mesa[2]=thrownCard;
+                    //stateP1
+                    //infoStateTrucoIdP1[idxR2FThrownCard]='0'+idxCard;
+                    //stateP2
+                    int c=0,p=0;
+                    for(auto card : handP2) if(utils.firstWinsTruco(card, thrownCard)) c++;
+                    for(auto card : handP2) if(utils.valorTruco(card)==utils.valorTruco(thrownCard)) p++;
+                    infoStateTrucoIdP2[idxR2SAmountBetter]='0'+c;
+                    infoStateTrucoIdP2[idxR2SAmountParda]='0'+p;
+                    infoStateTrucoIdP2[idxR2SThrownCard]='0'+valorTrucoAbs5GivenCard[thrownCard];
+                    //history
+                    history+="(TP1)";
+
+                    //handP1.erase(handP1.begin()+idxCard);
+                    isP1TrucoTurn=false;
+                    isP1Turn=false;
+                }else{
+                    mesa[3]=thrownCard;
+                    //handP2.erase(handP2.begin()+idxCard);
+                    history+="(TP2)";
+                }
+            }else{
+                if(isP1TrucoTurn){
+                    mesa[2]=thrownCard;
+                    //handP1.erase(handP1.begin()+idxCard);
+                    history+="(TP1)";
+                }else{
+                    mesa[3]=thrownCard;
+                    //stateP1
+                    //infoStateTrucoIdP2[idxR2FThrownCard]='0'+idxCard;
+                    //stateP2
+                    int c=0,p=0;
+                    for(auto card : handP1) if(utils.firstWinsTruco(card, thrownCard)) c++;
+                    for(auto card : handP1) if(utils.valorTruco(card)==utils.valorTruco(thrownCard)) p++;
+                    infoStateTrucoIdP1[idxR2SAmountBetter]='0'+c;
+                    infoStateTrucoIdP1[idxR2SAmountParda]='0'+p;
+                    infoStateTrucoIdP1[idxR2SThrownCard]='0'+valorTrucoAbs5GivenCard[thrownCard];
+                    //history
+                    history+="(TP2)";
+
+                    //handP2.erase(handP2.begin()+idxCard);
+                    isP1TrucoTurn=true;
+                    isP1Turn=true;
+                }
+            }
+        }else if(currentRound==2){
+            if(isP1TrucoTurn){
+                if(P1StartsInTruco){
+                    mesa[4]=thrownCard;
+                    infoStateTrucoIdP1[idxR3thrownCardStart]=ptsToString(valorTrucoGivenCard[thrownCard])[0];
+                    infoStateTrucoIdP1[idxR3thrownCardStart+1]=ptsToString(valorTrucoGivenCard[thrownCard])[1];
+                    infoStateTrucoIdP2[idxR3thrownCardStart]=ptsToString(valorTrucoGivenCard[thrownCard])[0];
+                    infoStateTrucoIdP2[idxR3thrownCardStart+1]=ptsToString(valorTrucoGivenCard[thrownCard])[1];
+                    isP1TrucoTurn=false;
+                    isP1Turn=false;
+                    history+="(TP1)";
+                }else{
+                    mesa[4]=thrownCard;
+                }
+            }else{
+                if(P1StartsInTruco){
+                    mesa[5]=thrownCard;
+                }else{
+                    mesa[5]=thrownCard;
+                    infoStateTrucoIdP1[idxR3thrownCardStart]=ptsToString(valorTrucoGivenCard[thrownCard])[0];
+                    infoStateTrucoIdP1[idxR3thrownCardStart+1]=ptsToString(valorTrucoGivenCard[thrownCard])[1];
+                    infoStateTrucoIdP2[idxR3thrownCardStart]=ptsToString(valorTrucoGivenCard[thrownCard])[0];
+                    infoStateTrucoIdP2[idxR3thrownCardStart+1]=ptsToString(valorTrucoGivenCard[thrownCard])[1];
+                    isP1TrucoTurn=true;
+                    isP1Turn=true;
+                    history+="(TP2)";
+                }
+            }
+        }
+        
+        if(mesa[2*currentRound]!="" && mesa[2*currentRound+1]!=""){
+            if(utils.firstWinsTruco(mesa[2*currentRound], mesa[2*currentRound+1])){
+                roundWinsP1++;
+                isP1TrucoTurn=true;
+                isP1Turn=true;
+                P1StartsInTruco=true;
+                whoWonHistory+="1";
+            }else if(utils.firstWinsTruco(mesa[2*currentRound+1], mesa[2*currentRound])){
+                roundWinsP2++;
+                isP1TrucoTurn=false;
+                isP1Turn=false;
+                P1StartsInTruco=false;
+                whoWonHistory+="2";
+            }else{
+                roundWinsP1++;
+                roundWinsP2++;
+                isP1TrucoTurn=true;
+                isP1Turn=true;
+                P1StartsInTruco=true;
+                whoWonHistory+="E";
+            }
+
+            if(whoWinsRound[whoWonHistory]==1){
+                terminal=true;
+                gamePointsP1+=trucoValue;
+            }else if(whoWinsRound[whoWonHistory]==2){
+                terminal=true;
+                gamePointsP2+=trucoValue;
+            }else{
+                currentRound++;
+                if(currentRound==1){
+                    if(P1StartsInTruco){
+                        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P1-R2F|";
+                        infoStateTrucoIdP1+="[X]"+getBucketsAbs14Str(handP1)+"|";
+                        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P2-R2S|";
+                        infoStateTrucoIdP2+=getBucketsAbs5Str(handP2)+"[X][M][P]|";
+                    }else{
+                        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P1-R2S|";
+                        infoStateTrucoIdP1+=getBucketsAbs5Str(handP1)+"[X][M][P]|";
+                        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P2-R2F|";
+                        infoStateTrucoIdP2+="[X]"+getBucketsAbs14Str(handP2)+"|";
+                    }
+                }else if(currentRound==2){
+                    if(P1StartsInTruco){
+                        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P1-R3F|";
+                        infoStateTrucoIdP1+=getBucketsAbs14Str(handP1)+"[XX]|";
+                        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P2-R3S|";
+                        infoStateTrucoIdP2+=getBucketsAbs14Str(handP2)+"[XX]|";
+                    }else{
+                        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P1-R3S|";
+                        infoStateTrucoIdP1+=getBucketsAbs14Str(handP1)+"[XX]|";
+                        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|P2-R3F|";
+                        infoStateTrucoIdP2+=getBucketsAbs14Str(handP2)+"[XX]|";
+                    }
+                }
+            }
+            
+        }
+    }
+
+    void throwCard(int idxCard){//only agent uses
         if(currentRound==0){
             if(isP1TrucoTurn){
                 mesa[0]=handP1[idxCard];
-                //stateP2
-                int c=0,p=0;
-                for(auto card : handP2) if(utils.firstWinsTruco(card, handP1[idxCard])) c++;
-                for(auto card : handP2) if(utils.valorTruco(card)==utils.valorTruco(handP1[idxCard])) p++;
-                infoStateTrucoIdP2[idxR1AmountBetter]='0'+c;
-                infoStateTrucoIdP2[idxR1AmountParda]='0'+p;
-                infoStateTrucoIdP2[idxR1ThrownCard]='0'+valorTrucoAbs5GivenCard[handP1[idxCard]];
                 //stateP1
                 infoStateTrucoIdP1[idxR1ThrownCard]='0'+idxCard;
                 //history
@@ -274,13 +413,6 @@ class Game{
                     mesa[2]=handP1[idxCard];
                     //stateP1
                     infoStateTrucoIdP1[idxR2FThrownCard]='0'+idxCard;
-                    //stateP2
-                    int c=0,p=0;
-                    for(auto card : handP2) if(utils.firstWinsTruco(card, handP1[idxCard])) c++;
-                    for(auto card : handP2) if(utils.valorTruco(card)==utils.valorTruco(handP1[idxCard])) p++;
-                    infoStateTrucoIdP2[idxR2SAmountBetter]='0'+c;
-                    infoStateTrucoIdP2[idxR2SAmountParda]='0'+p;
-                    infoStateTrucoIdP2[idxR2SThrownCard]='0'+valorTrucoAbs5GivenCard[handP1[idxCard]];
                     //history
                     history+="(TP1)";
 
@@ -301,13 +433,7 @@ class Game{
                     mesa[3]=handP2[idxCard];
                     //stateP1
                     infoStateTrucoIdP2[idxR2FThrownCard]='0'+idxCard;
-                    //stateP2
-                    int c=0,p=0;
-                    for(auto card : handP1) if(utils.firstWinsTruco(card, handP2[idxCard])) c++;
-                    for(auto card : handP1) if(utils.valorTruco(card)==utils.valorTruco(handP2[idxCard])) p++;
-                    infoStateTrucoIdP1[idxR2SAmountBetter]='0'+c;
-                    infoStateTrucoIdP1[idxR2SAmountParda]='0'+p;
-                    infoStateTrucoIdP1[idxR2SThrownCard]='0'+valorTrucoAbs5GivenCard[handP2[idxCard]];
+
                     //history
                     history+="(TP2)";
 
@@ -322,8 +448,7 @@ class Game{
                     mesa[4]=handP1[idxCard];
                     infoStateTrucoIdP1[idxR3thrownCardStart]=ptsToString(valorTrucoGivenCard[handP1[idxCard]])[0];
                     infoStateTrucoIdP1[idxR3thrownCardStart+1]=ptsToString(valorTrucoGivenCard[handP1[idxCard]])[1];
-                    infoStateTrucoIdP2[idxR3thrownCardStart]=ptsToString(valorTrucoGivenCard[handP1[idxCard]])[0];
-                    infoStateTrucoIdP2[idxR3thrownCardStart+1]=ptsToString(valorTrucoGivenCard[handP1[idxCard]])[1];
+            
                     isP1TrucoTurn=false;
                     isP1Turn=false;
                     history+="(TP1)";
@@ -335,8 +460,7 @@ class Game{
                     mesa[5]=handP2[idxCard];
                 }else{
                     mesa[5]=handP2[idxCard];
-                    infoStateTrucoIdP1[idxR3thrownCardStart]=ptsToString(valorTrucoGivenCard[handP2[idxCard]])[0];
-                    infoStateTrucoIdP1[idxR3thrownCardStart+1]=ptsToString(valorTrucoGivenCard[handP2[idxCard]])[1];
+                    
                     infoStateTrucoIdP2[idxR3thrownCardStart]=ptsToString(valorTrucoGivenCard[handP2[idxCard]])[0];
                     infoStateTrucoIdP2[idxR3thrownCardStart+1]=ptsToString(valorTrucoGivenCard[handP2[idxCard]])[1];
                     isP1TrucoTurn=true;
@@ -499,8 +623,8 @@ class Game{
             }
             FileInTruco.close();
         }
-        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|"+infoStateTrucoIdP1.substr(8);
-        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|"+infoStateTrucoIdP2.substr(8);
+        if(playerIsMano) infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|"+infoStateTrucoIdP1.substr(8);
+        else infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|"+infoStateTrucoIdP2.substr(8);
         if(hasToRespondTruco) isP1Turn=hasToRespondTrucoIsP1;
     }
 
@@ -513,12 +637,13 @@ class Game{
         envidoValue = envidoBetValue;
         isP1Turn=isP1TrucoTurn;
 
-        if(envidoPointsP1>=envidoPointsP2){ //gana P1
+        bool P1WonEnvido;
+        cout<<"P1 won envido? (1/0):"<<endl;
+        cin>>P1WonEnvido;
+        if(P1WonEnvido){ //gana P1
             gamePointsP1+=envidoValue;
-            informEnvidoPointsP1Wins();
         }else{
             gamePointsP2+=envidoValue;
-            informEnvidoPointsP2Wins();
         }
 
         if(gamePointsP1>=30 || gamePointsP2>=30) terminal=true;
@@ -541,14 +666,14 @@ class Game{
             }
             FileInTruco.close();
         }
-        infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|"+infoStateTrucoIdP1.substr(8);
-        infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|"+infoStateTrucoIdP2.substr(8);
+        if(playerIsMano) infoStateTrucoIdP1="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|"+infoStateTrucoIdP1.substr(8);
+        else infoStateTrucoIdP2="1|"+ptsToString(gamePointsP1)+"-"+ptsToString(gamePointsP2)+"|"+infoStateTrucoIdP2.substr(8);
         if(hasToRespondTruco) isP1Turn=hasToRespondTrucoIsP1;
     }
 
     void playerPassEnvido(){
         appendToEnvidoInfoStates("(p)");
-        if(playerIsMano) inEnvidoStageP1=false;
+        if(isP1Turn) inEnvidoStageP1=false;
         else inEnvidoStageP2=false;
     }
 
@@ -580,7 +705,6 @@ class Game{
 
     //informing
     void informPlayerActions(){
-        informPlayersHand();
         if((playerIsMano && inEnvidoStageP1) || (!playerIsMano && inEnvidoStageP2)){
             cout<<"Envido stage"<<endl;
             cout<<"0: (p)"<<endl;
@@ -592,9 +716,7 @@ class Game{
             cout<<"4: (q)"<<endl;
             cout<<"5: (nq)"<<endl;
             cout<<"6: (bt)"<<endl;
-            cout<<"7: (T1)"<<endl;
-            cout<<"8: (T2)"<<endl;
-            cout<<"9: (T3)"<<endl;
+            cout<<"7: (T)"<<endl;
         }
     }
     void informRejectTruco(){
@@ -602,7 +724,7 @@ class Game{
         cout<<(isP1Turn?"P1":"P2");
         cout<<" rejects truco bet"<<endl;
         cout<<string(7,'+')<<endl;
-    }
+    } 
     void informAcceptTruco(){
         cout<<string(7,'+')<<endl;
         cout<<(isP1Turn?"P1":"P2");
@@ -678,11 +800,11 @@ class Game{
     }
     void informPlayersGamePoints(){
         if(playerIsMano){
-            cout<<"Players GP: "<<gamePointsP1<<endl;
-            cout<<"Agents GP: "<<gamePointsP2<<endl;
+            cout<<"Agent GP: "<<gamePointsP1<<endl;
+            cout<<"Opponent GP: "<<gamePointsP2<<endl;
         }else{
-            cout<<"Players GP: "<<gamePointsP2<<endl;
-            cout<<"Agents GP: "<<gamePointsP1<<endl;
+            cout<<"Agent GP: "<<gamePointsP2<<endl;
+            cout<<"Opponent GP: "<<gamePointsP1<<endl;
         }
     }
 
@@ -693,6 +815,7 @@ class Game{
     bool playerIsMano;
     bool terminal;
     vector<string> mesa;
+    vector<string> handPlayer;
     vector<string> handP1;
     vector<bool> handP1Used;
     vector<string> handP2;
@@ -737,6 +860,13 @@ class Game{
 
     bool inEnvidoStageP1;
     bool inEnvidoStageP2;
+
+    vector<string> inputHand(){
+        cout<<"INPUT HAND CARDS: "<<endl;
+        string c1,c2,c3;
+        cin>>c1>>c2>>c3;
+        return {c1,c2,c3};
+    }
 
     vector<string> getActionsArray(string action){
         deque<char> q;
@@ -911,9 +1041,17 @@ int main(){
         whoWinsRound["EE2"] = 2;
     }
     
-    int gamePointsPlayer=15, gamePointsAgent=15;
-    bool playerStartsAsMano = true;
-    Game game(gamePointsPlayer, gamePointsAgent, playerStartsAsMano);
+    int gamePointsP1, gamePointsP2;
+    bool playerStartsAsMano;
+    cout<<"Sos mano? (1/0): "<<endl;
+    cin>>playerStartsAsMano;
+    cout<<"Input puntos partida mano: "<<endl;
+    cin>>gamePointsP1;
+    cout<<"Input puntos partida NO mano: "<<endl;
+    cin>>gamePointsP2;
+    gamePointsP1+=15;
+    gamePointsP2+=15;
+    Game game(gamePointsP1, gamePointsP2, playerStartsAsMano);
     while(true){
         //get init strategies
         strategies.clear();
@@ -955,11 +1093,10 @@ int main(){
         cout<<string(20,'*')<<endl;
         cout<<"NEW ROUND"<<endl;
         game.informPlayersGamePoints();
-        game.informPlayersHand();
         while(!game.roundHasFinished()){
             cout<<string(15,'-')<<endl;
-            if(game.isPlayerTurn()){
-                cout<<"PLAYERS turn"<<endl;
+            if(!game.isPlayerTurn()){
+                cout<<"MAKE OPPONENT MOVES"<<endl;
                 game.informPlayerActions();
                 int actId;
                 cin>>actId;
@@ -976,18 +1113,23 @@ int main(){
                 else if(actId==4) game.acceptTruco();
                 else if(actId==5) game.rejectTruco();
                 else if(actId==6) game.betTruco();
-                else if(actId==7) game.throwCard(0);
-                else if(actId==8) game.throwCard(1);
-                else if(actId==9) game.throwCard(2);
+                else if(actId==7) {
+                    string card;
+                    cin>>card;
+                    game.throwCardForced(card);
+                }
+                else if(actId==9){
+                    game.rejectTruco();
+                }
+                
             }else{
                 cout<<"AGENTS turn"<<endl;
                 game.playAgent();
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             }
         }  
 
         if(game.gameHasFinished()) break;
-        game = Game(game.getGamePointsPlayer(), game.getGamePointsAgent(), !game.getPlayerStartedAsMano());
+        game = Game(game.getGamePointsP2(), game.getGamePointsP1(), !game.getPlayerStartedAsMano());
     }
     game.informWin();
 }
